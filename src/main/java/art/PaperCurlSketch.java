@@ -86,28 +86,35 @@ public class PaperCurlSketch extends PApplet {
     }
 
     void drawRibbon(float x0, float y0) {
+
+        // where the ribbon is pointing right now (instant direction)
         float ang = flowAngle(x0, y0);
 
-        int steps = (int) random(maxSteps * 0.55f, maxSteps * 1.15f);
-        float localStep = stepSize * random(0.75f, 1.25f);
+        // total length ≈ steps × localStep
+        int steps = (int) random(maxSteps * 0.55f, maxSteps * 1.15f); // number of dots
+        float localStep = stepSize * random(0.75f, 1.25f); // how far dots are
         float w = baseWidth * random(0.55f, 1.35f);
 
         // Choose color: mostly paper tones, sometimes accent
         int baseCol = choosePaperOrAccent();
 
-        PVector[] pts = new PVector[steps];
+        PVector[] pts = new PVector[steps]; // array of points that stores the entire path of one ribbon
         pts[0] = new PVector(x0, y0);
 
+        // how strongly the ribbon is allowed to bend (turning intensity)
         float localCurl = curliness * random(0.6f, 1.4f);
 
-        for (int i = 1; i < steps; i++) {
+        for (int i = 1; i < steps; i++) { // generating the path
             PVector p = pts[i - 1];
 
-            float target = flowAngle(p.x, p.y);
-            ang = lerpAngle(ang, target, 0.22f);
+            // How do we follow the flow field without snapping abruptly to it?
+            float target = flowAngle(p.x, p.y); // ideal direction at this point in space
+            ang = lerpAngle(ang, target, 0.22f); // 78% of the old direction (ang), 22% of the new desired direction (target)
 
             // encourage curls/loops
+            // if i comment, looks straight and boring
             ang += (noise(p.x * 0.012f, p.y * 0.012f, (float)seed * 0.0001f) - 0.5f) * (1.7f * localCurl);
+            // if i comment, looks too perfect and digital
             ang += random(-0.2f, 0.2f) * localCurl;
 
             float nx = p.x + cos(ang) * localStep;
@@ -127,17 +134,19 @@ public class PaperCurlSketch extends PApplet {
         noStroke();
         beginShape(QUAD_STRIP);
 
+        // opacity for the entire ribbon
         float a = alphaBase * random(0.65f, 1.25f);
 
-        for (int i = 0; i < pts.length; i++) {
-            PVector p = pts[i];
-            PVector dir = tangent(pts, i);
-            PVector n = new PVector(-dir.y, dir.x);
+        for (int i = 0; i < pts.length; i++) { // drawing the ribbon
+            PVector p = pts[i]; // Get the current point on the path
+            PVector dir = tangent(pts, i); // Compute direction of the path (tangent)
+            PVector n = new PVector(-dir.y, dir.x); // Compute the perpendicular direction (normal)
             n.normalize();
 
+            // Compute local ribbon width
             float wf = w * (0.8f + 0.45f * noise(p.x * 0.01f, p.y * 0.01f, (float)seed * 0.0002f));
 
-            // shading oscillates so strips feel “rolled”
+            // Compute rolling-paper shading, one side bright, one side dark
             float shade = 0.5f + 0.5f * sin(i * 0.35f + noise(p.x * 0.02f, p.y * 0.02f) * TWO_PI);
 
             int light = lerpColor(baseCol, color(255), 0.30f + 0.40f * shade);
